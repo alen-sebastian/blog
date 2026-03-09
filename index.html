@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog | Alen Sebastian</title>
+  <meta name="description" content="CTF writeups, web exploitation and security research by Alen Sebastian." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <a href="https://alensebastian.in" class="nav-logo">
+      <span class="nav-logo-bracket">&lt;</span>alen<span class="nav-logo-accent">sebastian</span><span class="nav-logo-bracket">/&gt;</span>
+    </a>
+    <div class="nav-links">
+      <a href="https://alensebastian.in" class="nav-link"><i class="fas fa-arrow-left"></i> Portfolio</a>
+      <a href="https://github.com/0xgh0stri13y" target="_blank" class="nav-link"><i class="fab fa-github"></i> GitHub</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <p class="hero-eyebrow"><span class="dot"></span> BLOG</p>
+    <h1 class="hero-title">Security Research<br /></h1>
+    <p class="hero-sub">CTF writeups · Web exploitation ·</p>
+  </section>
+
+  <!-- FILTERS -->
+  <section class="filters-section">
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="ctf">CTF Writeup</button>
+      <button class="filter-btn" data-filter="web">Web Security</button>
+    </div>
+  </section>
+
+  <!-- POSTS GRID -->
+  <main class="posts-grid" id="posts">
+
+    <article class="post-card" data-category="ctf">
+      <a href="./posts/lfi-to-rce.html" class="post-card-link">
+        <div class="post-card-top">
+          <span class="post-tag ctf">CTF Writeup</span>
+          <span class="post-date">Mar 09, 2026</span>
+        </div>
+        <h2 class="post-title">From LFI to RCE via Log Poisoning</h2>
+        <p class="post-excerpt">Chaining a basic local file inclusion in a PHP app all the way to an interactive reverse shell using Apache log poisoning.</p>
+        <div class="post-footer">
+          <span class="read-time"><i class="far fa-clock"></i> 8 min</span>
+          <span class="read-more">Read post <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </a>
+    </article>
+    <article class="post-card" data-category="web">
+      <a href="./posts/ssti-bypass.html" class="post-card-link">
+        <div class="post-card-top">
+          <span class="post-tag web">Web Security</span>
+          <span class="post-date">Feb 21, 2026</span>
+        </div>
+        <h2 class="post-title">SSTI to RCE: Bypassing Jinja2 Filters</h2>
+        <p class="post-excerpt">A deep dive into server-side template injection in a Flask app — finding, exploiting, and crafting filter-bypass payloads.</p>
+        <div class="post-footer">
+          <span class="read-time"><i class="far fa-clock"></i> 10 min</span>
+          <span class="read-more">Read post <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </a>
+    </article>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <p>© 2026 <span class="footer-accent">Alen Sebastian</span> · <a href="https://alensebastian.in">alensebastian.in</a></p>
+  </footer>
+
+  <script>
+    const btns = document.querySelectorAll('.filter-btn');
+    const cards = document.querySelectorAll('.post-card');
+    btns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        btns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const f = btn.dataset.filter;
+        cards.forEach(c => {
+          c.style.display = (f === 'all' || c.dataset.category === f) ? 'flex' : 'none';
+        });
+      });
+    });
+  </script>
+</body>
+</html>
