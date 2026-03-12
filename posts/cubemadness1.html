@@ -35,7 +35,7 @@
         <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Blog</a>
         <span class="post-tag ctf">CTF Writeup</span>
         <span class="post-date">Mar 12, 2026</span>
-        <span class="read-time"><i class="far fa-clock"></i> 7 min</span>
+        <span class="read-time"><i class="far fa-clock"></i> 6 min</span>
       </div>
 
       <h1 class="post-article-title">HTB CubeMadness1 — Cheating My Way to the Flag</h1>
@@ -47,168 +47,160 @@
       <div class="post-article-body">
 
         <p>
-          I'll be honest — when I first saw the <strong>GamePwn</strong> category on HTB I almost skipped it.
-          I do web stuff mostly. Game hacking felt like a completely different world.
-          But CubeMadness1 is rated Very Easy and I had twenty minutes to kill, so I downloaded
-          the zip and opened it up. What followed was actually one of the more satisfying
-          "oh it's that simple?" moments I've had in a while.
+          This was my first proper attempt at the <strong>GamePwn</strong> category on HTB.
+          I mostly do web stuff so this felt like stepping into unfamiliar territory —
+          but CubeMadness1 is rated Very Easy, and I'd heard Cheat Engine is the go-to
+          tool for these challenges. I figured it was a good place to start learning.
+          Turns out it was a lot more straightforward than I expected.
         </p>
 
         <h2>What even is this challenge</h2>
         <p>
-          You extract the zip and get a folder full of DLLs, a couple of executables, and some
-          Unity game assets. Running the main executable opens up a small 3D game — you're a
-          little character on a platform, and there are cubes scattered around. The score
-          counter in the top-left reads <code>0 / 20</code>.
+          You extract the zip and get a folder with a Unity game inside.
+          Running the main executable opens a small 3D game — you're a little character on
+          a platform and there are cubes scattered around the map. The score counter in the
+          top-left reads <code>0 / 20</code>.
         </p>
 
         <p>
-          I ran around the map collecting everything I could find.
-          Got to 6. Map was empty. <code>6 / 20</code> sitting there mocking me.
-          There are literally no more cubes anywhere on the map.
+          I ran around collecting everything I could find.
+          Got to 6. Map was empty. <code>6 / 20</code> just sitting there.
+          No more cubes anywhere on the map — I checked every corner.
         </p>
 
         <p>
-          So the game is lying to you — or rather, it's telling you the win condition is 20
-          but only giving you the tools to reach 6. Which means you're not supposed to
-          find the other 14. You're supposed to <em>make</em> the game think you already have them.
-        </p>
-
-        <h2>My first instinct (the wrong one)</h2>
-        <p>
-          My first thought was to reverse the game binary. The game's built with Unity, and
-          when I poked at the <code>GameAssembly.dll</code>, I could tell pretty quickly it was
-          compiled with <strong>il2cpp</strong>. That's Unity's way of converting C# game logic to
-          native C++ — developers use it specifically to make the game harder to reverse.
-          Tools like <code>Il2CppDumper</code> can help, but for a Very Easy challenge this felt
-          like overkill.
-        </p>
-
-        <p>
-          I closed dnSpy and opened <strong>Cheat Engine</strong> instead.
+          So the game wants you to collect 20 but only has 6 in the world.
+          The other 14 don't exist. Which means you're not supposed to
+          <em>find</em> them — you're supposed to make the game
+          <em>think</em> you already have them. That's where Cheat Engine comes in.
         </p>
 
         <h2>What Cheat Engine actually does</h2>
         <p>
           If you've never used it — Cheat Engine is a memory scanner for Windows processes.
-          It attaches to a running program and lets you search through its memory for specific
-          values, then modify them on the fly. Game hackers have used it forever to do things
-          like set their health to 9999 or give themselves unlimited ammo. For us, it's a
-          legitimate RE tool for runtime analysis.
+          You attach it to a running program and it lets you search through that program's
+          memory for specific values, then change them on the fly. People have used it for
+          years to do things like give themselves infinite health or max ammo in games.
+          In CTF context it's a legitimate tool for runtime memory analysis.
         </p>
 
         <p>
-          The logic we're working with: somewhere in the game's memory, there's an integer
-          that holds the current cube count. We need to find it and change it to 20.
+          The idea here is simple: somewhere in the game's memory there's an integer
+          that stores the current cube count. Find it. Change it to 20. Done.
         </p>
 
-        <h2>Attaching to the process and initial scan</h2>
+        <h2>Attaching to the process</h2>
         <p>
-          With the game running, I opened Cheat Engine and hit the process selector
-          (the flashing monitor icon in the top left). Selected the CubeMadness1 process.
-          Now I'm looking at the game's memory in real time.
+          With the game running, I opened Cheat Engine and clicked the process selector —
+          the little flashing monitor icon at the top left. It shows you all running
+          processes on your system. I selected the CubeMadness1 process and hit Open.
+          Now Cheat Engine is reading the game's memory live.
         </p>
 
+        <h2>Initial scan</h2>
         <p>
-          My current cube count is 0. So I set the scan type to
-          <code>Exact Value</code>, value type to <code>4 Bytes</code> (standard integer —
-          most game scores are stored this way), and searched for <code>0</code>.
-        </p>
-
-        <p>
-          The result: roughly <strong>40 million addresses</strong> all holding the value 0.
-          Obviously. Everything in the process that's zero right now shows up.
-          This is expected — the first scan is just to establish a baseline.
-        </p>
-
-        <h2>Narrowing it down</h2>
-        <p>
-          This is where it gets interesting. I went back into the game and collected exactly
-          one cube. Counter now reads <code>1 / 20</code>.
-          I switched the scan type to <code>Increased value by...</code> and entered <code>1</code>,
-          then clicked Next Scan. CE threw out every address that didn't increase by exactly 1.
-          Down to around 37,000.
+          My current cube count is 0. In Cheat Engine I set the scan type to
+          <code>Exact Value</code>, the value type to <code>4 Bytes</code>
+          (integers in games are almost always stored as 4-byte values),
+          typed <code>0</code> in the value field, and hit <strong>First Scan</strong>.
         </p>
 
         <p>
-          Still too many. Collected a second cube.
-          Next Scan again with value increased by 1. Down to a few thousand.
-          Collected the third, fourth — kept scanning. After collecting all 6 available cubes
-          and filtering each time, I was left with just <strong>3 addresses</strong>.
+          Result:<strong>Thousands of addresses</strong> — all holding the value 0.
+          That sounds overwhelming but it's completely normal. Every variable, counter,
+          or chunk of memory that happens to be zero right now gets flagged.
+          This first scan is just setting the baseline. The real work is filtering from here.
+        </p>
+
+        <h2>Narrowing it down — one cube at a time</h2>
+        <p>
+          I went back into the game and picked up exactly one cube. Score: <code>1 / 20</code>.
+          Back in Cheat Engine, I changed the scan type to
+          <code>Increased value by...</code>, entered <code>1</code>, and hit
+          <strong>Next Scan</strong>. CE immediately discards every address that
+          didn't go up by exactly 1. Down to around 37,000.
         </p>
 
         <p>
-          All three held the same current value (6) and had changed consistently
-          with my cube count through every scan. That's the address — or rather, three
-          copies of it, which Unity sometimes keeps in sync across different memory regions.
+          Still a lot. Picked up a second cube. Next Scan again. Few thousand left.
+          Kept going — third, fourth, fifth, sixth cube, running a Next Scan after
+          each one. By the time I'd picked up all 6 available cubes and filtered at
+          every step, Cheat Engine had narrowed it down to just <strong>3 addresses</strong>.
         </p>
 
-        <pre><code># The 3 narrowed-down addresses after collecting all 6 cubes
-# All three holding value: 6
-# Example addresses (yours will differ each run):
+        <p>
+          All three were holding the value <code>6</code> and had tracked my pickup
+          count perfectly through every single scan. That's our target.
+          Unity sometimes stores the same game variable in a few mirrored memory
+          locations simultaneously — that's why we get 3 instead of 1.
+          Doesn't matter, we just change all of them.
+        </p>
+
+        <pre><code># After collecting all 6 cubes — 3 addresses remain
+# All holding value: 6
+# These are example addresses, yours will be different each run:
 0x206FEA32A40
 0x206FEA32A44
 0x206FEA32A48</code></pre>
 
-        <h2>The actual "exploit"</h2>
+        <h2>Changing the value</h2>
         <p>
-          I selected all three addresses in the CE results panel, hit the red arrow to send
-          them to the address list at the bottom, then double-clicked each value field
-          and changed them to <code>20</code>.
+          I selected all 3 addresses from the results list, clicked the red arrow
+          to move them down to the address list at the bottom of the CE window,
+          then double-clicked the value field on each one and typed <code>20</code>.
         </p>
 
         <p>
-          Switched back to the game window.
+          Switched back to the game.
         </p>
 
         <p>
-          The counter instantly jumped to <code>20 / 20</code> and the flag appeared on screen.
+          The counter jumped straight to <code>20 / 20</code> and the flag popped up on screen.
         </p>
 
-        <pre><code>HTB{CU83_M4DN355_UNM4DD3N3D}</code></pre>
+        <pre><code>HTB{CU83_XXXXXXX_XXXXXXXXX}</code></pre>
 
         <h2>Why this works</h2>
         <p>
-          Games track state in memory like any other program — they just do it fast and in
-          real time. The cube count is just an integer. There's no server validating it,
-          no checksum, no anti-cheat layer. We're running this locally, so we own the process.
-          Cheat Engine just gives us a systematic way to find <em>which</em> integer it is among
-          the millions sitting in memory.
+          The cube count is just a number living in memory. There's nothing on a server
+          checking it, no anti-cheat, no integrity verification — the game runs entirely
+          locally so we have full control over its process. Cheat Engine is just a
+          systematic way to find <em>which</em> number it is among the millions stored in memory.
         </p>
 
         <p>
-          The multi-pass scanning technique (scan for 0 → update → scan for 1 → update...)
-          is the core of how Cheat Engine narrows things down. Every time the value you're
-          tracking changes by a known amount, you filter out everything that didn't match.
-          After a handful of iterations you're left with the exact addresses you care about.
+          The technique of scanning → changing the real value → scanning again is called
+          multi-pass scanning. Each round filters out everything that didn't change the
+          way you expected. Do it enough times and you zero in on exactly the memory
+          address you're after. It's genuinely elegant once you see it in action.
         </p>
 
-        <h2>Would I try CubeMadness2?</h2>
+        <h2>First impressions of GamePwn</h2>
         <p>
-          Yeah, already did. The second challenge in the series adds a layer of encryption
-          on top of the memory values — so the raw integer you see in CE isn't the actual
-          cube count, it's an encoded form of it. Same concept, significantly more annoying
-          to pull off. I'll write that one up soon.
+          Coming from a web background this was a fun detour. The thinking is different —
+          instead of exploiting logic flaws in an app, you're working directly with
+          runtime memory. But the core idea of "find the thing, change the thing"
+          isn't too far off from what we do in web exploitation.
         </p>
 
         <p>
-          This one though — genuinely a good intro to GamePwn. If you've never touched Cheat
-          Engine before, this challenge teaches you the fundamentals of memory scanning in
-          about twenty minutes, which is a solid return on time investment.
+          CubeMadness2 apparently adds encryption on top of the stored values so the number
+          you see in CE isn't the actual cube count — it's some encoded version of it.
+          I've already done that one too and it's noticeably trickier. Writeup coming soon.
         </p>
 
         <hr class="post-divider" />
 
         <p class="post-article-footer">
-          If you're new to game hacking, the Cheat Engine built-in tutorial (it ships
-          with one) is actually worth going through before trying CTF challenges.
-          It covers exactly this kind of value scanning.
-          Questions? Find me on <a href="https://twitter.com/Al3nVettithanam" class="inline-link">Twitter</a>
-          or <a href="mailto:hello@alensebastian.in" class="inline-link">email</a>.
+          If you're completely new to Cheat Engine, it actually ships with a built-in
+          tutorial that walks you through exactly this kind of scanning step by step.
+          Worth doing before jumping into CTF challenges.
+          Questions? Hit me up on
+          <a href="https://twitter.com/Al3nVettithanam" class="inline-link">Twitter</a>
+          or <a href="mailto:hello@alensebastian.in" class="inline-link">hello@alensebastian.in</a>.
         </p>
 
       </div>
-
     </article>
   </main>
 
