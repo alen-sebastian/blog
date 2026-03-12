@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTB CubeMadness1 — GamePwn Writeup | Alen Sebastian</title>
+  <meta name="description" content="How I solved HTB CubeMadness1 — a GamePwn challenge where you use Cheat Engine to manipulate game memory and collect 20 cubes that don't exist." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../style.css" />
+
+  <style>
+    /* ── Screenshot figures ── */
+    .post-figure {
+      margin: 24px 0;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    .post-figure img {
+      width: 100%;
+      display: block;
+      background: var(--bg-terminal);
+    }
+    .post-figure figcaption {
+      padding: 10px 14px;
+      background: var(--bg-terminal);
+      border-top: 1px solid var(--border-color);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .post-figure figcaption i {
+      color: var(--accent-primary);
+      font-size: 11px;
+    }
+
+    /* Fallback if image fails / not yet added */
+    .post-figure img[src=""] ,
+    .post-figure img:not([src]) {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <a href="https://alensebastian.in" class="nav-logo">
+      <span class="nav-logo-bracket">&lt;</span>alen<span class="nav-logo-accent">sebastian</span><span class="nav-logo-bracket">/&gt;</span>
+    </a>
+    <div class="nav-links">
+      <a href="../index.html" class="nav-link"><i class="fas fa-arrow-left"></i> All Posts</a>
+      <a href="https://github.com/0xgh0stri13y" target="_blank" class="nav-link"><i class="fab fa-github"></i> GitHub</a>
+    </div>
+  </nav>
+
+  <!-- POST -->
+  <main class="post-page">
+    <article class="post-article">
+
+      <div class="post-article-meta">
+        <a href="../index.html" class="back-link"><i class="fas fa-arrow-left"></i> Back to Blog</a>
+        <span class="post-tag ctf">CTF Writeup</span>
+        <span class="post-date">Mar 12, 2026</span>
+        <span class="read-time"><i class="far fa-clock"></i> 7 min</span>
+      </div>
+
+      <h1 class="post-article-title">HTB CubeMadness1 — Cheating My Way to the Flag</h1>
+      <p class="post-article-subtitle">
+        A GamePwn challenge where the goal is to collect 20 cubes in a game that only has 6.
+        Spoiler: you're not meant to find the rest.
+      </p>
+
+      <div class="post-article-body">
+
+        <p>
+          I'll be honest — when I first saw the <strong>GamePwn</strong> category on HTB I almost skipped it.
+          I do web stuff mostly. Game hacking felt like a completely different world.
+          But CubeMadness1 is rated Very Easy and I had twenty minutes to kill, so I downloaded
+          the zip and opened it up. What followed was actually one of the more satisfying
+          "oh it's that simple?" moments I've had in a while.
+        </p>
+
+        <h2>What even is this challenge</h2>
+        <p>
+          You extract the zip and get a folder full of DLLs, a couple of executables, and some
+          Unity game assets. Running the main executable opens up a small 3D game — you're a
+          little cube-character on a platform, and there are other cubes scattered around the map.
+          The score counter in the top-left reads <code>0 / 20</code>.
+        </p>
+
+        <!-- SCREENSHOT: The game opening screen showing 0/20 counter top-left -->
+        <figure class="post-figure">
+          <img src="./img/01-game-start.png" alt="CubeMadness1 game opening — score counter showing 0/20 in the top left" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            The game on launch. Score counter top-left: 0/20. The objective is immediately clear.
+          </figcaption>
+        </figure>
+
+        <p>
+          I ran around the map collecting everything I could find.
+          Got to 6. Map was empty. <code>6 / 20</code> sitting there mocking me.
+          There are literally no more cubes anywhere on the map.
+        </p>
+
+        <!-- SCREENSHOT: Game showing 6/20 with empty map -->
+        <figure class="post-figure">
+          <img src="./img/02-game-6-cubes.png" alt="Game showing 6/20 after collecting all available cubes — map is empty" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            6/20 and the map is completely empty. The other 14 don't exist in the game world.
+          </figcaption>
+        </figure>
+
+        <p>
+          So the game is lying to you — or rather, it's telling you the win condition is 20
+          but only giving you the tools to reach 6. Which means you're not supposed to
+          find the other 14. You're supposed to <em>make</em> the game think you already have them.
+        </p>
+
+        <h2>My first instinct (the wrong one)</h2>
+        <p>
+          My first thought was to reverse the game binary. The game's built with Unity, and
+          when I poked at <code>GameAssembly.dll</code>, I could tell pretty quickly it was
+          compiled with <strong>il2cpp</strong>. That's Unity's way of converting C# game logic to
+          native C++ — developers use it specifically to make the game harder to reverse.
+          Tools like <code>Il2CppDumper</code> can help, but for a Very Easy challenge this felt
+          like overkill.
+        </p>
+
+        <p>
+          I closed dnSpy and opened <strong>Cheat Engine</strong> instead.
+        </p>
+
+        <h2>Attaching to the process</h2>
+        <p>
+          With the game running, I opened Cheat Engine and hit the process selector —
+          the flashing monitor icon at the top left. A list of running processes comes up.
+          I selected the CubeMadness1 process and hit Open.
+        </p>
+
+        <!-- SCREENSHOT: Cheat Engine process selector with game process highlighted -->
+        <figure class="post-figure">
+          <img src="./img/03-ce-attach.png" alt="Cheat Engine process selection window with CubeMadness1 highlighted" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            Attaching Cheat Engine to the game process. Select the game from the list and hit Open.
+          </figcaption>
+        </figure>
+
+        <h2>Initial scan — fishing in 40 million addresses</h2>
+        <p>
+          My current cube count is 0. I set the scan type to
+          <code>Exact Value</code>, value type to <code>4 Bytes</code> (standard integer —
+          most game scores are stored this way), typed <code>0</code>, and hit First Scan.
+        </p>
+
+        <!-- SCREENSHOT: Cheat Engine showing ~40 million results after scanning for 0 -->
+        <figure class="post-figure">
+          <img src="./img/04-ce-scan-0.png" alt="Cheat Engine initial scan result — approximately 40 million addresses holding value 0" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            First scan for value 0 returns around 40 million results. Expected — everything
+            currently zero in the process shows up. This is just our baseline.
+          </figcaption>
+        </figure>
+
+        <p>
+          Obviously everything in the process that's currently zero shows up — about 40 million
+          addresses. This isn't a problem, it's just the baseline. The narrowing starts now.
+        </p>
+
+        <h2>Narrowing it down — the good part</h2>
+        <p>
+          I went back into the game and collected exactly one cube. Counter: <code>1 / 20</code>.
+          Back in CE, I changed the scan type to <code>Increased value by...</code>,
+          entered <code>1</code>, and hit Next Scan.
+          CE threw out every address that didn't increase by exactly 1.
+        </p>
+
+        <!-- SCREENSHOT: Cheat Engine after collecting 1 cube — results narrowed to ~37k -->
+        <figure class="post-figure">
+          <img src="./img/05-ce-scan-1.png" alt="Cheat Engine after collecting 1 cube — results narrowed significantly" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            After collecting 1 cube and doing a Next Scan for "increased by 1" — down to around
+            37,000 addresses. Better, but still too many.
+          </figcaption>
+        </figure>
+
+        <p>
+          Collected a second cube. Next Scan again. Down to a few thousand.
+          Kept going — third, fourth cube. After collecting all 6 available cubes
+          and filtering at each step, I was left with just <strong>3 addresses</strong>.
+        </p>
+
+        <!-- SCREENSHOT: Cheat Engine narrowed to 3-4 final addresses -->
+        <figure class="post-figure">
+          <img src="./img/06-ce-3-addresses.png" alt="Cheat Engine narrowed down to 3 addresses after collecting all 6 cubes" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            After collecting all 6 cubes with a Next Scan at each step — 3 addresses left.
+            All three consistently tracked our cube count through every scan.
+          </figcaption>
+        </figure>
+
+        <p>
+          All three held the same current value (6) and had changed consistently
+          with my cube count through every single scan. That's it — Unity sometimes keeps
+          the same game variable mirrored across a few memory regions, which is why we
+          get more than one address. Doesn't matter, we change all of them.
+        </p>
+
+        <h2>Changing the value — the "exploit"</h2>
+        <p>
+          I selected all three addresses in the results panel, hit the red arrow to send
+          them to the address list at the bottom, then double-clicked each value field
+          and changed it to <code>20</code>.
+        </p>
+
+        <!-- SCREENSHOT: Cheat Engine address list with values being changed to 20 -->
+        <figure class="post-figure">
+          <img src="./img/07-ce-change-20.png" alt="Cheat Engine address list showing the 3 addresses with value being set to 20" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            Dragged the 3 addresses to the address list below. Double-click the value field
+            on each and type 20.
+          </figcaption>
+        </figure>
+
+        <p>
+          Switched back to the game window. The counter instantly jumped to
+          <code>20 / 20</code> and the flag appeared on screen.
+        </p>
+
+        <!-- SCREENSHOT: Game showing flag after reaching 20/20 -->
+        <figure class="post-figure">
+          <img src="./img/08-flag.png" alt="CubeMadness1 game displaying the HTB flag after cube count reaches 20" />
+          <figcaption>
+            <i class="fas fa-image"></i>
+            Counter hits 20/20 and the flag pops up in-game. That's it.
+          </figcaption>
+        </figure>
+
+        <pre><code>HTB{CU83_M4DN355_UNM4DD3N3D}</code></pre>
+
+        <h2>Why this works</h2>
+        <p>
+          Games track state in memory like any other program — they just do it fast and in
+          real time. The cube count is just an integer. There's no server validating it,
+          no checksum, no anti-cheat layer. We're running this locally, so we own the process.
+          Cheat Engine just gives us a systematic way to find <em>which</em> integer it is among
+          the millions sitting in memory.
+        </p>
+
+        <p>
+          The multi-pass scanning technique (scan for 0 → collect → scan for 1 → collect...)
+          is the core of how Cheat Engine narrows things down. Every time the value changes
+          by a known amount, you filter out everything that didn't match.
+          After a handful of iterations you're left with the exact addresses you care about.
+        </p>
+
+        <h2>Would I try CubeMadness2?</h2>
+        <p>
+          Yeah, already did. The second challenge in the series adds encryption
+          on top of the memory values — the raw integer in CE isn't the actual cube count,
+          it's an encoded form of it. Same concept, significantly more annoying to pull off.
+          I'll write that one up soon.
+        </p>
+
+        <p>
+          This one though — genuinely a good intro to GamePwn. If you've never touched Cheat
+          Engine before, this challenge teaches you the fundamentals of memory scanning in
+          about twenty minutes, which is a solid return on time investment.
+        </p>
+
+        <hr class="post-divider" />
+
+        <p class="post-article-footer">
+          If you're new to game hacking, the Cheat Engine built-in tutorial (it ships
+          with one) is actually worth going through before trying CTF challenges.
+          It covers exactly this kind of value scanning.
+          Questions? Find me on <a href="https://twitter.com/Al3nVettithanam" class="inline-link">Twitter</a>
+          or <a href="mailto:alensebastianofficial@gmail.com" class="inline-link">email</a>.
+        </p>
+
+      </div>
+
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 <span class="footer-accent">Alen Sebastian</span> · <a href="https://alensebastian.in">alensebastian.in</a></p>
+  </footer>
+</body>
+</html>
