@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DVAPI — OWASP API Top 10 Walkthrough | Alen Sebastian</title>
+  <meta name="description" content="Full walkthrough of DVAPI covering all 10 OWASP API security vulnerabilities — BOLA, broken auth, SSRF, NoSQL injection and more." />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="../style.css" />
+  <style>
+    .post-figure {
+      margin: 24px 0;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      background: var(--bg-terminal);
+    }
+    .post-figure img {
+      width: 100%;
+      display: block;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .post-figure figcaption {
+      padding: 9px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .post-figure figcaption i { color: var(--accent-primary); font-size: 11px; margin-top: 2px; flex-shrink: 0; }
+    .vuln-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+    .endpoint-pill {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 6px;
+      background: rgba(0,212,255,.07);
+      color: var(--accent-primary);
+      border: 1px solid rgba(0,212,255,.15);
+      margin-bottom: 12px;
+    }
+    .flag-box {
+      background: rgba(34,197,94,.07);
+      border: 1px solid rgba(34,197,94,.25);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: #22c55e;
+      margin: 14px 0;
+    }
+    .flag-box i { margin-right: 8px; }
+    .toc {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin: 28px 0;
+    }
+    .toc-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-primary);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+    .toc ol {
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .toc a {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .toc a:hover { color: var(--accent-primary); }
+    .vuln-section { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border-color); }
+    .step-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <nav class="navbar">
+    <a href="https://alensebastian.in" class="nav-logo">
+      <span class="nav-logo-bracket">&lt;</span>alen<span class="nav-logo-accent">sebastian</span><span class="nav-logo-bracket">/&gt;</span>
+    </a>
+    <div class="nav-links">
+      <a href="https://blog.alensebastian.in" class="nav-link"><i class="fas fa-arrow-left"></i> All Posts</a>
+      <a href="https://github.com/0xgh0stri13y" target="_blank" class="nav-link"><i class="fab fa-github"></i> GitHub</a>
+    </div>
+  </nav>
+
+  <main class="post-page">
+    <article class="post-article">
+
+      <div class="post-article-meta">
+        <a href="https://blog.alensebastian.in" class="back-link"><i class="fas fa-arrow-left"></i> Back to Blog</a>
+        <span class="post-tag web">Web Security</span>
+        <span class="post-date">Mar 18, 2026</span>
+        <span class="read-time"><i class="far fa-clock"></i> 20 min</span>
+      </div>
+
+      <h1 class="post-article-title">DVAPI — Breaking Every OWASP API Top 10 Vulnerability</h1>
+      <p class="post-article-subtitle">
+        A full walkthrough of DVAPI, an intentionally vulnerable API covering all 10 entries
+        from the OWASP API Security Top 10. From BOLA to NoSQL injection — one endpoint at a time.
+      </p>
+
+      <div class="post-article-body">
+
+        <p>
+          I actually finished this back in <strong>2024</strong>. Had the whole thing documented,
+          notes everywhere, screenshots taken. Then I just... never posted it. It sat in my
+          drafts collecting dust for over a year while I kept telling myself I'd clean it up
+          "this weekend." Today I finally got tired of looking at it and decided to just put
+          it out.
+        </p>
+
+        <p>
+          Anyway — <strong>DVAPI</strong> (Damn Vulnerable API) is a deliberately insecure API
+          built to cover every entry in the OWASP API Security Top 10. Think of it like DVWA
+          but for APIs. It runs locally at <code>127.0.0.1:3000</code>, comes with a Swagger UI,
+          and is genuinely one of the better hands-on resources for getting comfortable with
+          API-specific bugs. I went through the whole thing as part of a security assessment
+          and this is the writeup I should've posted a long time ago.
+        </p>
+
+        <p>
+          For bugs that had multiple scenarios I'm keeping it to one — if you get the technique
+          once, the rest are just the same thing on a different endpoint.
+        </p>
+
+        <!-- TABLE OF CONTENTS -->
+        <div class="toc">
+          <p class="toc-title"><i class="fas fa-list"></i> &nbsp;Vulnerabilities Covered</p>
+          <ol>
+            <li><a href="#bola">Broken Object Level Authorization (BOLA)</a></li>
+            <li><a href="#broken-auth">Broken Authentication — Weak JWT Secret</a></li>
+            <li><a href="#misconfig">Security Misconfiguration — Stack Trace Disclosure</a></li>
+            <li><a href="#bopla">Broken Object Property Level Authorization</a></li>
+            <li><a href="#resource">Unrestricted Resource Consumption</a></li>
+            <li><a href="#bfla">Broken Function Level Authorization</a></li>
+            <li><a href="#business">Unrestricted Access to Sensitive Business Flows</a></li>
+            <li><a href="#ssrf">Server-Side Request Forgery (SSRF)</a></li>
+            <li><a href="#inventory">Improper Inventory Management</a></li>
+            <li><a href="#nosql">Unsafe Consumption of APIs — NoSQL Injection</a></li>
+          </ol>
+        </div>
+
+        <!-- ==================== 1. BOLA ==================== -->
+        <div class="vuln-section" id="bola">
+          <h2>1. Broken Object Level Authorization (BOLA)</h2>
+          <span class="endpoint-pill">GET /api/getNote?username={username}</span>
+
+          <p>
+            BOLA sits at the top of the OWASP API list for a reason — it's everywhere and
+            it's embarrassingly easy to miss during development. The idea is simple: the API
+            uses some identifier (in this case a username) to decide what data to return,
+            but never actually checks whether the person asking <em>owns</em> that data.
+            Your token just needs to be valid. Whose data you ask for? Totally up to you.
+          </p>
+
+          <p class="step-label">Step 1 — Normal request</p>
+          <p>
+            Log in as a regular user and send a request to
+            <code>/api/getNote?username=youruser</code> through Burp. Works fine,
+            returns your notes.
+          </p>
+
+          <figure class="post-figure">
+            <img src="01-bola-ownuser.png" alt="Request to /api/getNote with own username returning notes" />
+            <figcaption><i class="fas fa-image"></i> Fetching your own notes — works as expected.</figcaption>
+          </figure>
+
+          <p class="step-label">Step 2 — Change the username to Admin</p>
+          <p>
+            Now just swap the <code>username</code> parameter to <code>Admin</code> while
+            keeping your own auth token. The server never checks whether your token belongs
+            to that user — it just runs the query and hands the data back. Admin's notes,
+            including the flag, come right out.
+          </p>
+
+          <figure class="post-figure">
+            <img src="02-bola-admin.png" alt="BOLA exploit — accessing Admin notes with a different user's token" />
+            <figcaption><i class="fas fa-image"></i> Changed username to Admin, kept own token — Admin's notes come back without any complaint.</figcaption>
+          </figure>
+
+          <div class="flag-box"><i class="fas fa-flag"></i>flag{bola_15_ev3rywh3r3}</div>
+
+          <p>
+            The fix is just tying the authorization check to the token, not the parameter.
+            If your token says you're user A, you should only ever get user A's data —
+            regardless of what username you put in the request.
+          </p>
+        </div>
+
+        <!-- ==================== 2. BROKEN AUTH ==================== -->
+        <div class="vuln-section" id="broken-auth">
+          <h2>2. Broken Authentication — Weak JWT Secret</h2>
+          <span class="endpoint-pill">GET /api/user/{username}</span>
+
+          <p>
+            A JWT is only as trustworthy as the secret used to sign it. If that secret is
+            something like <code>password1</code> or — as we're about to see —
+            <code>secret123</code>, then anyone who figures it out can mint their own tokens
+            and claim to be whoever they want. Including admin.
+          </p>
+
+          <p class="step-label">Step 1 — Find the secret</p>
+          <p>
+            Capture any authenticated request to <code>/api/user/{username}</code> in
+            Burp Suite Pro and throw it at the active scanner. It flags the JWT almost
+            immediately — weak HMAC secret, value: <code>secret123</code>.
+          </p>
+
+          <figure class="post-figure">
+            <img src="03-jwt-secret.png" alt="Burp Suite dashboard showing JWT HMAC secret key is 'secret123'" />
+            <figcaption><i class="fas fa-image"></i> Burp's scanner catches the weak JWT secret straight away.</figcaption>
+          </figure>
+
+          <p class="step-label">Step 2 — Forge an admin token</p>
+          <p>
+            Head to <a href="https://jwt.io" class="inline-link" target="_blank">jwt.io</a>,
+            paste in the captured token, flip <code>isAdmin</code> to <code>true</code> in
+            the payload, and enter <code>secret123</code> as the signing secret.
+            Copy the generated token.
+          </p>
+
+          <figure class="post-figure">
+            <img src="04-jwt-forge.png" alt="jwt.io interface showing isAdmin set to true and secret123 as signing key" />
+            <figcaption><i class="fas fa-image"></i> Forged token at jwt.io — isAdmin true, signed with the cracked secret.</figcaption>
+          </figure>
+
+          <p class="step-label">Step 3 — Use the forged token</p>
+          <p>
+            Swap the Authorization header in Burp for the forged token and resend.
+            The server checks the signature — valid, because we used the right secret —
+            and just hands back the admin data. Flag included.
+          </p>
+
+          <figure class="post-figure">
+            <img src="05-jwt-flag.png" alt="Response from /api/user endpoint using forged admin token showing the flag" />
+            <figcaption><i class="fas fa-image"></i> Forged token accepted — admin endpoint returns the goods.</figcaption>
+          </figure>
+        </div>
+
+        <!-- ==================== 3. SECURITY MISCONFIG ==================== -->
+        <div class="vuln-section" id="misconfig">
+          <h2>3. Security Misconfiguration — Stack Trace Disclosure</h2>
+          <span class="endpoint-pill">POST /api/profile</span>
+
+          <p>
+            This one's less of an active exploit and more of a "the developers forgot to
+            turn off debug mode" situation. Send a request with a slightly broken JWT — just
+            change one character in the signature — and instead of getting a clean
+            <code>401 Unauthorized</code>, the server panics and dumps its entire stack trace
+            into the response. Framework version, internal file paths, function names — all
+            of it just sitting there in plain text.
+          </p>
+
+          <p>
+            On its own this doesn't give you access to anything. But as recon it's
+            gold — you know exactly what's running under the hood, which makes finding
+            the next bug a lot easier.
+          </p>
+
+          <figure class="post-figure">
+            <img src="06-misconfig-stacktrace.png" alt="Stack trace error response from /api/profile after sending malformed JWT" />
+            <figcaption><i class="fas fa-image"></i> One bad character in the JWT and the whole stack trace spills out.</figcaption>
+          </figure>
+
+          <p>
+            This was reproducible across pretty much every authenticated endpoint in the
+            app — not just <code>/api/profile</code>. The fix is turning debug mode off in
+            production and returning a generic error message instead of the actual exception.
+          </p>
+        </div>
+
+        <!-- ==================== 4. BOPLA ==================== -->
+        <div class="vuln-section" id="bopla">
+          <h2>4. Broken Object Property Level Authorization</h2>
+          <span class="endpoint-pill">POST /api/register</span>
+
+          <p>
+            Also known as mass assignment — where an API blindly applies everything you
+            send in the request body to the object it's creating, without checking whether
+            you're actually allowed to set those fields. The classic example is setting your
+            own role to admin during signup. Here it's a little more game-like: you can set
+            your own score.
+          </p>
+
+          <p class="step-label">Step 1 — Sneak in an extra field</p>
+          <p>
+            Capture the <code>POST /api/register</code> request. Normal body is just
+            username and password. Add <code>"score": 10000</code> and send it.
+          </p>
+
+          <pre><code>POST /api/register HTTP/1.1
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "pass123",
+  "score": 10000
+}</code></pre>
+
+          <figure class="post-figure">
+            <img src="07-bopla-register.png" alt="Burp request to /api/register with injected score property set to 10000" />
+            <figcaption><i class="fas fa-image"></i> Extra score field added to the registration body — server takes it without question.</figcaption>
+          </figure>
+
+          <p class="step-label">Step 2 — Check if it actually worked</p>
+          <p>
+            Log in with the new account and hit <code>/api/score</code> with its token.
+            Score: 10000. The API wrote the injected value straight into the user object
+            without validating whether that field should even be settable on registration.
+          </p>
+
+          <figure class="post-figure">
+            <img src="08-bopla-score.png" alt="Response from /api/score showing score of 10000 from the injected property" />
+            <figcaption><i class="fas fa-image"></i> Score is 10000 — the injection worked perfectly.</figcaption>
+          </figure>
+        </div>
+
+        <!-- ==================== 5. RESOURCE CONSUMPTION ==================== -->
+        <div class="vuln-section" id="resource">
+          <h2>5. Unrestricted Resource Consumption</h2>
+          <span class="endpoint-pill">POST /api/profile/upload</span>
+
+          <p>
+            The profile picture upload endpoint has zero size restrictions. You can throw
+            a file of basically any size at it and the server will try to process it —
+            happily eating up disk space and memory while it does. Not flashy, but in a
+            real environment this kind of thing can take down a server or rack up cloud
+            storage bills fast.
+          </p>
+
+          <p class="step-label">Step 1 — Create a large dummy file</p>
+          <p>
+            Quick one-liner with <code>dd</code> to generate a 100MB file:
+          </p>
+          <pre><code># Create a 100MB dummy image
+dd if=/dev/urandom bs=1M count=100 > bigfile.jpg</code></pre>
+
+          <figure class="post-figure">
+            <img src="09-resource-create.png" alt="Terminal showing dd command creating a 100MB file" />
+            <figcaption><i class="fas fa-image"></i> 100MB file generated in the terminal — ready to upload.</figcaption>
+          </figure>
+
+          <p class="step-label">Step 2 — Upload it</p>
+          <p>
+            Open the DVAPI Swagger UI, go to <code>POST /api/profile/upload</code>,
+            select the file, and execute. Capture it in Burp to confirm what went through.
+            No rejection, no size error — just a clean 200.
+          </p>
+
+          <figure class="post-figure">
+            <img src="10-resource-upload.png" alt="Burp showing the large file upload request being sent to /api/profile/upload" />
+            <figcaption><i class="fas fa-image"></i> 100MB upload accepted — no limit enforced anywhere.</figcaption>
+          </figure>
+        </div>
+
+        <!-- ==================== 6. BFLA ==================== -->
+        <div class="vuln-section" id="bfla">
+          <h2>6. Broken Function Level Authorization</h2>
+          <span class="endpoint-pill">DELETE /api/user/{username}</span>
+
+          <p>
+            BFLA is similar to BOLA but at the function level — instead of accessing
+            someone else's data, you're invoking functionality you're not supposed to have
+            access to. Here, the <code>DELETE</code> method on the user endpoint is
+            admin-only. Except the server never actually checks that when you call it.
+          </p>
+
+          <p class="step-label">Step 1 — Start with a normal GET</p>
+          <p>
+            Send a <code>GET /api/user/targetuser</code> with a regular user token.
+            Works fine, returns the profile.
+          </p>
+
+          <figure class="post-figure">
+            <img src="11-bfla-get.png" alt="Normal GET request to /api/user endpoint returning user profile" />
+            <figcaption><i class="fas fa-image"></i> Normal GET — profile data comes back fine.</figcaption>
+          </figure>
+
+          <p class="step-label">Step 2 — Switch to DELETE</p>
+          <p>
+            In Burp Repeater, right-click and change the method to <code>DELETE</code>.
+            Send it with the same regular user token. User gets deleted. No admin check,
+            no confirmation, nothing.
+          </p>
+
+          <figure class="post-figure">
+            <img src="12-bfla-delete.png" alt="DELETE request to /api/user succeeding with a regular user token" />
+            <figcaption><i class="fas fa-image"></i> Same token, different method — account deleted without any privilege check.</figcaption>
+          </figure>
+        </div>
+
+        <!-- ==================== 7. BUSINESS FLOWS ==================== -->
+        <div class="vuln-section" id="business">
+          <h2>7. Unrestricted Access to Sensitive Business Flows</h2>
+          <span class="endpoint-pill">POST /api/addTicket</span>
+
+          <p>
+            This is the kind of vulnerability that doesn't look dangerous until you think
+            about it for a second. The ticket submission endpoint works fine for a normal
+            user submitting one request. But there's nothing stopping you from sending
+            that same request a thousand times — no rate limiting, no CAPTCHA, no per-user
+            quota. A spam attack or automated abuse of this flow would go completely unchecked.
+          </p>
+
+          <p class="step-label">Step 1 — Capture the ticket request</p>
+          <p>
+            Log in, open the Ticket section in the UI, submit one ticket, intercept it in Burp.
+          </p>
+
+          <figure class="post-figure">
+            <img src="13-ticket-capture.png" alt="Captured ticket creation request in Burp from the browser UI" />
+            <figcaption><i class="fas fa-image"></i> Ticket request captured in Burp — now we automate it.</figcaption>
+          </figure>
+
+          <p class="step-label">Step 2 — Spam it with Intruder</p>
+          <p>
+            Send to Burp Intruder, set payload type to <code>Null payloads</code>,
+            generate 99 iterations, run the attack. Every single request returns 200.
+            No throttling anywhere.
+          </p>
+
+          <figure class="post-figure">
+            <img src="14-ticket-intruder.png" alt="Burp Intruder results showing 99 successful ticket creations with 200 status" />
+            <figcaption><i class="fas fa-image"></i> 99 tickets submitted — all 200 OK. Rate limiting simply doesn't exist here.</figcaption>
+          </figure>
+        </div>
+
+        <!-- ==================== 8. SSRF ==================== -->
+        <div class="vuln-section" id="ssrf">
+          <h2>8. Server-Side Request Forgery (SSRF)</h2>
+          <span class="endpoint-pill">POST /api/addNoteWithLink</span>
+
+          <p>
+            SSRF is one of my favourites — the idea of using the server as your own personal
+            proxy to reach things you're not supposed to touch is just satisfying.
+            The <code>/api/addNoteWithLink</code> endpoint takes a URL, fetches it
+            server-side, and saves the content as a note. No URL validation. So naturally,
+            we point it at an internal service the outside world can't reach.
+          </p>
+
+          <p>
+            There's an internal service on <code>127.0.0.1:8443</code> that serves a flag.
+            Normally inaccessible from outside. But we're not fetching it — the server is.
+          </p>
+
+          <pre><code>POST /api/addNoteWithLink HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer &lt;token&gt;
+
+{
+  "url": "http://127.0.0.1:8443/flag"
+}</code></pre>
+
+          <figure class="post-figure">
+            <img src="15-ssrf.png" alt="SSRF exploit — Burp request changing URL to internal service at 127.0.0.1:8443/flag" />
+            <figcaption><i class="fas fa-image"></i> Pointed the URL at the internal service — server fetches it and hands the flag back to us.</figcaption>
+          </figure>
+        </div>
+
+        <!-- ==================== 9. INVENTORY ==================== -->
+        <div class="vuln-section" id="inventory">
+          <h2>9. Improper Inventory Management</h2>
+          <span class="endpoint-pill">GET /api/allChallenges</span>
+
+          <p>
+            This one's almost too simple. There's a <code>/api/allChallenges</code> endpoint
+            that returns challenge data filtered by a <code>type</code> parameter.
+            The intended value is <code>released</code>. But there's also unreleased content
+            sitting in the database — and nothing stops you from just asking for it by name.
+          </p>
+
+          <pre><code>GET /api/allChallenges?type=unreleased HTTP/1.1
+Authorization: Bearer &lt;token&gt;</code></pre>
+
+          <figure class="post-figure">
+            <img src="16-inventory.png" alt="Response from /api/allChallenges with type=unreleased showing hidden challenge data" />
+            <figcaption><i class="fas fa-image"></i> type=unreleased — hidden challenge data returned without any access check.</figcaption>
+          </figure>
+
+          <p>
+            No access control on who can query unreleased content. The parameter might as
+            well not exist. In a real app this could mean exposing beta features,
+            upcoming product data, or anything else that wasn't ready to go public.
+          </p>
+        </div>
+
+        <!-- ==================== 10. NOSQL ==================== -->
+        <div class="vuln-section" id="nosql">
+          <h2>10. Unsafe Consumption of APIs — NoSQL Injection</h2>
+          <span class="endpoint-pill">POST /api/login</span>
+
+          <p>
+            Last one, and honestly it's a fun one if you've never seen it before.
+            The login endpoint takes a JSON body and passes it straight into a MongoDB query —
+            no sanitisation. MongoDB supports special query operators like <code>$ne</code>
+            (not equal) directly in JSON. So instead of a password string, you can pass
+            a query object that matches anything.
+          </p>
+
+          <p>Normal login body:</p>
+          <pre><code>{
+  "username": "admin",
+  "password": "somepassword"
+}</code></pre>
+
+          <p>NoSQL injection — bypass the password entirely:</p>
+          <pre><code>{
+  "username": "admin",
+  "password": {"$ne": null}
+}</code></pre>
+
+          <figure class="post-figure">
+            <img src="17-nosql.png" alt="NoSQL injection in /api/login — password field replaced with MongoDB $ne operator" />
+            <figcaption><i class="fas fa-image"></i> Password swapped for a MongoDB operator — query matches any password, login succeeds.</figcaption>
+          </figure>
+
+          <p>
+            MongoDB evaluates the query, finds the admin user whose stored password is
+            "not equal to null" — which is always true — and hands back a valid token.
+            Full admin access without ever knowing the actual password.
+          </p>
+        </div>
+
+        <!-- WRAP UP -->
+        <div class="vuln-section" style="border-top: 1px solid var(--border-color); padding-top: 28px; margin-top: 48px;">
+          <h2>Some thoughts after going through all of this</h2>
+
+          <p>
+            The thing that stuck with me most doing this wasn't any individual bug —
+            it was how often the same core mistake shows up. The server just... trusts you.
+            Trusts that the username you passed is yours. Trusts that the fields in your
+            JSON are the only ones that matter. Trusts that the URL you gave it is safe to fetch.
+            Trusts that your password is a string and not a query object. That misplaced trust
+            is basically the whole list.
+          </p>
+
+          <p>
+            I also found it interesting how many of these are invisible from the outside
+            unless you're actively looking. BOLA in particular — from a user's perspective
+            everything seems to work fine. You'd never notice it unless someone was in Burp
+            swapping parameter values around. Which is exactly why it keeps showing up in
+            real-world pentests so often.
+          </p>
+
+          <p>
+            If you're getting into API testing and haven't run through DVAPI yet,
+            it's worth a few hours of your time. Set it up locally, open Burp, and
+            just poke at things. Half the fun is finding the bugs before reading
+            anyone else's writeup — so maybe close this tab and try it yourself first.
+          </p>
+
+          <hr class="post-divider" />
+
+          <p class="post-article-footer">
+            Got questions or want to talk through any of these?
+            DM me on <a href="https://twitter.com/Al3nVettithanam" class="inline-link">Twitter</a>
+            or shoot me a mail at <a href="mailto:hello@alensebastian.in" class="inline-link">hello@alensebastian.in</a>.
+          </p>
+        </div>
+
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 <span class="footer-accent">Alen Sebastian</span> · <a href="https://alensebastian.in">alensebastian.in</a></p>
+  </footer>
+</body>
+</html>
