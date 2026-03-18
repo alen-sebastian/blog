@@ -198,7 +198,7 @@
           </p>
 
           <figure class="post-figure">
-            <img src="01-bola-ownuser.png" alt="Request to /api/getNote with own username returning notes" />
+            <img src="/posts/dvapi/01-bola-ownuser.png" alt="Request to /api/getNote with own username returning notes" />
             <figcaption><i class="fas fa-image"></i> Fetching your own notes — works as expected.</figcaption>
           </figure>
 
@@ -211,7 +211,7 @@
           </p>
 
           <figure class="post-figure">
-            <img src="02-bola-admin.png" alt="BOLA exploit — accessing Admin notes with a different user's token" />
+            <img src="/posts/dvapi/02-bola-admin.png" alt="BOLA exploit — accessing Admin notes with a different user's token" />
             <figcaption><i class="fas fa-image"></i> Changed username to Admin, kept own token — Admin's notes come back without any complaint.</figcaption>
           </figure>
 
@@ -244,7 +244,7 @@
           </p>
 
           <figure class="post-figure">
-            <img src="03-jwt-secret.png" alt="Burp Suite dashboard showing JWT HMAC secret key is 'secret123'" />
+            <img src="/posts/dvapi/03-jwt-secret.png" alt="Burp Suite dashboard showing JWT HMAC secret key is 'secret123'" />
             <figcaption><i class="fas fa-image"></i> Burp's scanner catches the weak JWT secret straight away.</figcaption>
           </figure>
 
@@ -257,7 +257,7 @@
           </p>
 
           <figure class="post-figure">
-            <img src="04-jwt-forge.png" alt="jwt.io interface showing isAdmin set to true and secret123 as signing key" />
+            <img src="/posts/dvapi/04-jwt-forge.png" alt="jwt.io interface showing isAdmin set to true and secret123 as signing key" />
             <figcaption><i class="fas fa-image"></i> Forged token at jwt.io — isAdmin true, signed with the cracked secret.</figcaption>
           </figure>
 
@@ -269,7 +269,7 @@
           </p>
 
           <figure class="post-figure">
-            <img src="05-jwt-flag.png" alt="Response from /api/user endpoint using forged admin token showing the flag" />
+            <img src="/posts/dvapi/05-jwt-flag.png" alt="Response from /api/user endpoint using forged admin token showing the flag" />
             <figcaption><i class="fas fa-image"></i> Forged token accepted — admin endpoint returns the goods.</figcaption>
           </figure>
         </div>
@@ -295,7 +295,7 @@
           </p>
 
           <figure class="post-figure">
-            <img src="06-misconfig-stacktrace.png" alt="Stack trace error response from /api/profile after sending malformed JWT" />
+            <img src="/posts/dvapi/06-misconfig-stacktrace.png" alt="Stack trace error response from /api/profile after sending malformed JWT" />
             <figcaption><i class="fas fa-image"></i> One bad character in the JWT and the whole stack trace spills out.</figcaption>
           </figure>
 
@@ -335,7 +335,7 @@ Content-Type: application/json
 }</code></pre>
 
           <figure class="post-figure">
-            <img src="07-bopla-register.png" alt="Burp request to /api/register with injected score property set to 10000" />
+            <img src="/posts/dvapi/07-bopla-register.png" alt="Burp request to /api/register with injected score property set to 10000" />
             <figcaption><i class="fas fa-image"></i> Extra score field added to the registration body — server takes it without question.</figcaption>
           </figure>
 
@@ -347,7 +347,7 @@ Content-Type: application/json
           </p>
 
           <figure class="post-figure">
-            <img src="08-bopla-score.png" alt="Response from /api/score showing score of 10000 from the injected property" />
+            <img src="/posts/dvapi/08-bopla-score.png" alt="Response from /api/score showing score of 10000 from the injected property" />
             <figcaption><i class="fas fa-image"></i> Score is 10000 — the injection worked perfectly.</figcaption>
           </figure>
         </div>
@@ -373,7 +373,7 @@ Content-Type: application/json
 dd if=/dev/urandom bs=1M count=100 > bigfile.jpg</code></pre>
 
           <figure class="post-figure">
-            <img src="09-resource-create.png" alt="Terminal showing dd command creating a 100MB file" />
+            <img src="/posts/dvapi/09-resource-create.png" alt="Terminal showing dd command creating a 100MB file" />
             <figcaption><i class="fas fa-image"></i> 100MB file generated in the terminal — ready to upload.</figcaption>
           </figure>
 
@@ -385,7 +385,7 @@ dd if=/dev/urandom bs=1M count=100 > bigfile.jpg</code></pre>
           </p>
 
           <figure class="post-figure">
-            <img src="10-resource-upload.png" alt="Burp showing the large file upload request being sent to /api/profile/upload" />
+            <img src="/posts/dvapi/10-resource-upload.png" alt="Burp showing the large file upload request being sent to /api/profile/upload" />
             <figcaption><i class="fas fa-image"></i> 100MB upload accepted — no limit enforced anywhere.</figcaption>
           </figure>
         </div>
@@ -409,7 +409,7 @@ dd if=/dev/urandom bs=1M count=100 > bigfile.jpg</code></pre>
           </p>
 
           <figure class="post-figure">
-            <img src="11-bfla-get.png" alt="Normal GET request to /api/user endpoint returning user profile" />
+            <img src="/posts/dvapi/11-bfla-get.png" alt="Normal GET request to /api/user endpoint returning user profile" />
             <figcaption><i class="fas fa-image"></i> Normal GET — profile data comes back fine.</figcaption>
           </figure>
 
@@ -421,7 +421,7 @@ dd if=/dev/urandom bs=1M count=100 > bigfile.jpg</code></pre>
           </p>
 
           <figure class="post-figure">
-            <img src="12-bfla-delete.png" alt="DELETE request to /api/user succeeding with a regular user token" />
+            <img src="/posts/dvapi/12-bfla-delete.png" alt="DELETE request to /api/user succeeding with a regular user token" />
             <figcaption><i class="fas fa-image"></i> Same token, different method — account deleted without any privilege check.</figcaption>
           </figure>
         </div>
@@ -445,7 +445,7 @@ dd if=/dev/urandom bs=1M count=100 > bigfile.jpg</code></pre>
           </p>
 
           <figure class="post-figure">
-            <img src="13-ticket-capture.png" alt="Captured ticket creation request in Burp from the browser UI" />
+            <img src="/posts/dvapi/13-ticket-capture.png" alt="Captured ticket creation request in Burp from the browser UI" />
             <figcaption><i class="fas fa-image"></i> Ticket request captured in Burp — now we automate it.</figcaption>
           </figure>
 
@@ -457,7 +457,7 @@ dd if=/dev/urandom bs=1M count=100 > bigfile.jpg</code></pre>
           </p>
 
           <figure class="post-figure">
-            <img src="14-ticket-intruder.png" alt="Burp Intruder results showing 99 successful ticket creations with 200 status" />
+            <img src="/posts/dvapi/14-ticket-intruder.png" alt="Burp Intruder results showing 99 successful ticket creations with 200 status" />
             <figcaption><i class="fas fa-image"></i> 99 tickets submitted — all 200 OK. Rate limiting simply doesn't exist here.</figcaption>
           </figure>
         </div>
@@ -489,7 +489,7 @@ Authorization: Bearer &lt;token&gt;
 }</code></pre>
 
           <figure class="post-figure">
-            <img src="15-ssrf.png" alt="SSRF exploit — Burp request changing URL to internal service at 127.0.0.1:8443/flag" />
+            <img src="/posts/dvapi/15-ssrf.png" alt="SSRF exploit — Burp request changing URL to internal service at 127.0.0.1:8443/flag" />
             <figcaption><i class="fas fa-image"></i> Pointed the URL at the internal service — server fetches it and hands the flag back to us.</figcaption>
           </figure>
         </div>
@@ -510,7 +510,7 @@ Authorization: Bearer &lt;token&gt;
 Authorization: Bearer &lt;token&gt;</code></pre>
 
           <figure class="post-figure">
-            <img src="16-inventory.png" alt="Response from /api/allChallenges with type=unreleased showing hidden challenge data" />
+            <img src="/posts/dvapi/16-inventory.png" alt="Response from /api/allChallenges with type=unreleased showing hidden challenge data" />
             <figcaption><i class="fas fa-image"></i> type=unreleased — hidden challenge data returned without any access check.</figcaption>
           </figure>
 
@@ -547,7 +547,7 @@ Authorization: Bearer &lt;token&gt;</code></pre>
 }</code></pre>
 
           <figure class="post-figure">
-            <img src="17-nosql.png" alt="NoSQL injection in /api/login — password field replaced with MongoDB $ne operator" />
+            <img src="/posts/dvapi/17-nosql.png" alt="NoSQL injection in /api/login — password field replaced with MongoDB $ne operator" />
             <figcaption><i class="fas fa-image"></i> Password swapped for a MongoDB operator — query matches any password, login succeeds.</figcaption>
           </figure>
 
