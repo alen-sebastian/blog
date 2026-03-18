@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blog | Alen Sebastian</title>
   <meta name="description" content="CTF writeups, web exploitation and security research by Alen Sebastian." />
-  <link rel="icon" type="image/jpeg" href="/favicon.png" />
-  <link rel="shortcut icon" type="image/jpeg" href="/favicon.png" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="shortcut icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -48,23 +48,46 @@
 
   <!-- POSTS GRID -->
   <main class="posts-grid" id="posts">
- <article class="post-card" data-category="ctf">
-  <a href="./posts/cubemadness1" class="post-card-link">
-    <div class="post-card-top">
-      <span class="post-tag ctf">CTF Writeup</span>
-      <span class="post-date">Mar 12, 2026</span>
-    </div>
-    <h2 class="post-title">HTB CubeMadness1 — Pwn the Game, Capture the Flag</h2>
-    <p class="post-excerpt">
-      A GamePwn challenge where you collect 20 cubes in a map that only has 6.
-      Spoiler: Cheat Engine, 3 addresses, done.
-    </p>
-    <div class="post-footer">
-      <span class="read-time"><i class="far fa-clock"></i> 7 min</span>
-      <span class="read-more">Read post <i class="fas fa-arrow-right"></i></span>
-    </div>
-  </a>
-</article>
+
+    <!-- DVAPI -->
+    <article class="post-card" data-category="web">
+      <a href="./posts/dvapi" class="post-card-link">
+        <div class="post-card-top">
+          <span class="post-tag web">Web Security</span>
+          <span class="post-date">Mar 18, 2026</span>
+        </div>
+        <h2 class="post-title">DVAPI — Breaking Every OWASP API Top 10 Vulnerability</h2>
+        <p class="post-excerpt">
+          Full walkthrough of DVAPI covering all 10 OWASP API Security vulnerabilities.
+          From BOLA and broken auth to SSRF and NoSQL injection, one endpoint at a time.
+        </p>
+        <div class="post-footer">
+          <span class="read-time"><i class="far fa-clock"></i> 20 min</span>
+          <span class="read-more">Read post <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </a>
+    </article>
+
+    <!-- CubeMadness1 -->
+    <article class="post-card" data-category="ctf">
+      <a href="./posts/cubemadness1" class="post-card-link">
+        <div class="post-card-top">
+          <span class="post-tag ctf">CTF Writeup</span>
+          <span class="post-date">Mar 12, 2026</span>
+        </div>
+        <h2 class="post-title">HTB CubeMadness1 — Pwn the Game, Capture the Flag</h2>
+        <p class="post-excerpt">
+          A GamePwn challenge where you collect 20 cubes in a map that only has 6.
+          Spoiler: Cheat Engine, 3 addresses, done.
+        </p>
+        <div class="post-footer">
+          <span class="read-time"><i class="far fa-clock"></i> 7 min</span>
+          <span class="read-more">Read post <i class="fas fa-arrow-right"></i></span>
+        </div>
+      </a>
+    </article>
+
+    <!-- LFI to RCE -->
     <article class="post-card" data-category="ctf">
       <a href="./posts/lfi-to-rce" class="post-card-link">
         <div class="post-card-top">
@@ -79,6 +102,7 @@
         </div>
       </a>
     </article>
+
   </main>
 
   <!-- FOOTER -->
